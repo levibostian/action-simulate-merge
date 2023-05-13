@@ -1,0 +1,42 @@
+name: 'Simulate merging pull request'
+description: 'Simulate what would happen if you decide to squash and merge a pull request'
+runs:  
+  using: composite
+  steps:
+    - name: Confirm running in a pull request 
+      shell: bash 
+      run: echo "Not running on a pull request, exiting..." &&  exit 1
+      if: ${{ github.event_name != 'pull_request' }}
+
+    - name: Get branch names
+      id: branch-name
+      uses: tj-actions/branch-names@v6
+
+    # Squash all commits of the current branch into 1 commit. 
+    # Help with how to squash and merge a PR: https://stackoverflow.com/a/5201642
+    - name: Fetch all branches so we can reference base branch to merge into 
+      run: git fetch --depth=1
+      shell: bash 
+    - name: Configure git with name and email or git will throw error when trying to make a commit 
+      run: git config user.name "${{ github.actor }}" && git config user.email "${{ github.actor }}@users.noreply.github.com"
+      shell: bash 
+    - name: Creating new branch to make the squashed commit on. Must be checked out to a branch or commit will not succeed. 
+      run: git checkout -b "temp-squash-commits-branch"
+      shell: bash 
+    - name: Squash all commits in PR into 1 commit. Using the title of this PR as the commit message. 
+      run: git reset --soft origin/${{ steps.branch-name.outputs.base_ref_branch }} && git commit -m "${{ github.event.pull_request.title }}"
+      shell: bash 
+    - name: Run git log for debugging purposes to see if 1 commit was created as we expected 
+      run: git log 
+      shell: bash 
+    
+    # Merge the new squashed commit into the base branch to simulate merging this PR into base branch 
+    - name: Pull the base branch locally so we can use it 
+      run: git checkout ${{ steps.branch-name.outputs.base_ref_branch }} && git pull
+      shell: bash 
+    - name: Merge the squashed commit that we made into the local base branch 
+      run: git merge "temp-squash-commits-branch"
+      shell: bash 
+    - name: Run git log for debugging purposes to see if the merge shows 1 new squashed commit got merged successfully 
+      run: git log   
+      shell: bash 

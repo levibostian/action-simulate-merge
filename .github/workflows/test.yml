@@ -1,0 +1,11 @@
+name: Test Action 
+
+on: [pull_request]
+
+jobs:
+  run-action: 
+    runs-on: ubuntu-latest
+    steps: 
+    - uses: actions/checkout@v3
+    - name: Run action 
+      uses: ./
